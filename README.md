@@ -1,5 +1,12 @@
 # RxDigit - AI Powered Prescription & Health Wallet System
 
+# RxDigit – AI-Powered Prescription & Health Wallet System
+
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
+![React Native](https://img.shields.io/badge/React_Native-20232A?style=flat&logo=react&logoColor=61DAFB)
+![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=flat&logo=mongodb&logoColor=white)
+
 ## Overview
 
 RxDigit is a full-stack healthcare platform that digitizes handwritten prescriptions using OCR and NLP technologies. The platform connects Patients, Doctors, and Pharmacies in a single ecosystem for secure prescription management, medicine billing, and digital health records.
