@@ -1,7 +1,5 @@
 # RxDigit - AI Powered Prescription & Health Wallet System
 
-# RxDigit – AI-Powered Prescription & Health Wallet System
-
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
 ![React Native](https://img.shields.io/badge/React_Native-20232A?style=flat&logo=react&logoColor=61DAFB)
