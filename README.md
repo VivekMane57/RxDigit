@@ -37,6 +37,30 @@ RxDigit is not an OCR utility. It is a multi-sided healthcare platform connectin
 
 ---
 
+## Current Development Status
+
+RxDigit is under active development. The table below reflects what is implemented in the codebase today versus what is on the near-term roadmap.
+
+| Component | Status |
+|---|---|
+| Backend API (Node.js/Express/TypeScript) | ✅ Implemented — auth, prescriptions, doctor review, health wallet |
+| JWT Authentication (doctor & patient roles) | ✅ Implemented — 7-day HS256 tokens |
+| Patient App — prescription capture & structured submission | ✅ Implemented |
+| Doctor Web — dashboard, review modal, approve/reject | ✅ Implemented |
+| Doctor Web — notification bell with pending queue | ✅ Implemented (polling-based) |
+| Doctor Web — analytics panel (charts, CSV/JSON export) | ✅ Implemented (mock data, ready for live wiring) |
+| Health Wallet backend model | ✅ Implemented |
+| AI OCR extraction from handwritten images | 🚧 Not yet wired into the live flow — patients currently submit structured form data directly |
+| Pharmacy Dashboard | 🚧 Planned — not yet in the codebase |
+| Real-time push notifications (WebSocket/Firebase) | 🚧 Planned — current updates use polling |
+| Password hashing via bcrypt | 🚧 Planned — current dev build uses base64 (see [Security Features](#security-features)) |
+| Billing, payments, reminders, emergency card | 🚧 Planned — described in [Product Modules](#product-modules) as target functionality |
+
+> [!IMPORTANT]
+> Sections below describing OCR, Pharmacy, Billing, Payments, and Reminders describe the product's target architecture and vision. Treat the table above as the source of truth for what is functional in the repository today.
+
+---
+
 ## Problem Statement
 
 | Problem | Impact |
@@ -146,31 +170,8 @@ Healthcare in most emerging markets still runs on paper at the last mile — the
 
 ---
 
-## Product Screenshots
 
-> [!NOTE]
-> Screenshots will be added as the product UI is finalized for each release. Placeholders below map to the corresponding screen in the Patient, Doctor, and Pharmacy applications.
 
-<details>
-<summary><strong>📱 View Screenshot Placeholders</strong></summary>
-
-| Screen | Preview |
-|---|---|
-| Login | `[ screenshot: login.png ]` |
-| Register | `[ screenshot: register.png ]` |
-| Upload Prescription | `[ screenshot: upload-prescription.png ]` |
-| OCR Result | `[ screenshot: ocr-result.png ]` |
-| Doctor Review | `[ screenshot: doctor-review.png ]` |
-| Pharmacy Dashboard | `[ screenshot: pharmacy-dashboard.png ]` |
-| Billing | `[ screenshot: billing.png ]` |
-| Payment | `[ screenshot: payment.png ]` |
-| Reminder | `[ screenshot: reminder.png ]` |
-| Health Wallet | `[ screenshot: health-wallet.png ]` |
-| Timeline | `[ screenshot: timeline.png ]` |
-| Emergency Card | `[ screenshot: emergency-card.png ]` |
-| Profile | `[ screenshot: profile.png ]` |
-
-</details>
 
 ---
 
@@ -184,11 +185,10 @@ Healthcare in most emerging markets still runs on paper at the last mile — the
 
 | Demo | Link |
 |---|---|
-| Patient Journey | `[ video: patient-journey.mp4 ]` |
-| Doctor Workflow | `[ video: doctor-workflow.mp4 ]` |
-| Pharmacy Workflow | `[ video: pharmacy-workflow.mp4 ]` |
-| Complete Product Demo | `[ video: full-product-demo.mp4 ]` |
-| Architecture Walkthrough | `[ video: architecture-walkthrough.mp4 ]` |
+| Patient Journey | `[ [video: patient-journey.mp4 ](https://github.com/user-attachments/assets/58f791bd-d94c-45f7-87e9-f715eee8896e)]` |
+| Doctor & Pharma-Workflow | `[ [video: doctor & Pharma-workflow.mp4](https://github.com/user-attachments/assets/0627f174-b33d-4e4a-ad96-2408867f7f31) ]` |
+| Patient Payment | `[ [video:  Patient Payment .mp4 ](https://github.com/user-attachments/assets/2cce29f0-b32c-4909-b790-a70740fe35b8)]` |
+| Pharma Workflow and billing| `[ video: [Pharma Workflow and billing](https://github.com/user-attachments/assets/31eb0a1f-4e02-41db-83a3-05d8498fc6f7).mp4 ]` |
 
 </details>
 
@@ -354,14 +354,14 @@ erDiagram
 
 ```mermaid
 sequenceDiagram
-    participant U as User (Patient/Doctor/Pharmacy)
+    participant U as User (Doctor/Patient)
     participant API as Backend API
     participant DB as MongoDB
 
-    U->>API: POST /auth/login (credentials)
+    U->>API: POST /api/auth/{role}/login (credentials)
     API->>DB: Verify user + role
     DB-->>API: User record
-    API->>API: Generate JWT (role-scoped)
+    API->>API: Generate JWT - HS256, role-scoped, 7-day expiry
     API-->>U: JWT Access Token
     U->>API: Request with Authorization header
     API->>API: Verify JWT + Role
@@ -392,59 +392,67 @@ flowchart LR
 
 ```
 rxdigit/
-├── apps/
-│   ├── patient-app/                 # React Native (Expo) — Patient mobile application
-│   │   ├── app/                     # Expo Router screens
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── services/                # API clients
-│   │   └── assets/
-│   │
-│   ├── doctor-dashboard/            # React + TypeScript + Tailwind
-│   │   ├── src/
-│   │   │   ├── pages/
-│   │   │   ├── components/
-│   │   │   ├── features/review-workspace/
-│   │   │   └── services/
-│   │   └── public/
-│   │
-│   └── pharmacy-dashboard/          # React + Tailwind
+├── backend/
+│   └── rxdigit-backend/             # Node.js + Express + TypeScript API
 │       ├── src/
+│       │   ├── routes/
+│       │   │   ├── authRoutes.ts        # Doctor & patient register/login
+│       │   │   ├── doctorApiRoutes.ts   # Dashboard, review queue, approve/reject
+│       │   │   └── patientApiRoutes.ts  # Prescriptions, health wallet
+│       │   ├── models/                  # Mongoose schemas
+│       │   │   ├── Doctor.ts
+│       │   │   ├── Patient.ts
+│       │   │   ├── Prescription.ts
+│       │   │   └── HealthWalletEntry.ts
+│       │   ├── utils/
+│       │   │   └── auth.ts              # JWT & password utilities
+│       │   └── server.ts
+│       └── .env
+│
+├── Docter-Web/
+│   └── doctor-web/                  # React + TypeScript + Tailwind (Vite)
+│       ├── src/
+│       │   ├── layout/
+│       │   │   ├── Header.tsx           # Bell icon notifications
+│       │   │   └── Sidebar.tsx
 │       │   ├── pages/
+│       │   │   ├── DashboardOverview.tsx
+│       │   │   ├── AnalyticsPanel.tsx
+│       │   │   ├── LoginPage.tsx
+│       │   │   ├── SignupPage.tsx
+│       │   │   ├── PatientList.tsx
+│       │   │   ├── PatientHistory.tsx
+│       │   │   ├── HealthWallet.tsx
+│       │   │   ├── PrescriptionTable.tsx
+│       │   │   ├── DoctorProfile.tsx
+│       │   │   └── ProfilePage.tsx
 │       │   ├── components/
-│       │   └── services/
-│       └── public/
+│       │   │   ├── BarChart.tsx
+│       │   │   └── HorizontalBarChart.tsx
+│       │   ├── context/
+│       │   │   └── AuthContext.tsx
+│       │   ├── config/
+│       │   │   └── api.ts
+│       │   ├── App.tsx
+│       │   └── styles.css
+│       └── vite.config.ts
 │
-├── services/
-│   ├── backend-api/                 # Node.js + Express + TypeScript
-│   │   ├── src/
-│   │   │   ├── routes/
-│   │   │   ├── controllers/
-│   │   │   ├── models/              # Mongoose schemas
-│   │   │   ├── middleware/          # Auth, RBAC, validation
-│   │   │   └── config/
-│   │   └── tests/
-│   │
-│   └── ocr-service/                 # Python + FastAPI
+├── frontend/
+│   └── patient-expo/                # React Native (Expo) — Patient mobile app
 │       ├── app/
-│       │   ├── routers/
-│       │   ├── ocr_engine/          # PaddleOCR pipeline
-│       │   ├── models/
-│       │   └── utils/
-│       └── tests/
+│       │   └── (modals)/
+│       │       └── confirm-structure.tsx
+│       └── src/
+│           └── config/api.ts
 │
-├── docs/
-│   ├── architecture/
-│   ├── api/
-│   └── design-system/
-│
-├── .github/
-│   └── workflows/                   # CI/CD pipelines
-│
-├── docker-compose.yml
-├── .env.example
+├── COMPLETE_API_SPEC.md
+├── TESTING_GUIDE.md
+├── IMPLEMENTATION_SUMMARY.md
 └── README.md
 ```
+
+> [!NOTE]
+> A dedicated `pharmacy-dashboard` and standalone `ocr-service` are part of the target architecture (see [Complete System Architecture](#complete-system-architecture)) but are not yet present in the current codebase — see [Current Development Status](#current-development-status).
 
 ---
 
@@ -490,19 +498,24 @@ rxdigit/
 
 ## Design System
 
-RxDigit follows a dedicated Healthcare Design Language, tuned for clarity, trust, and clinical legibility.
+RxDigit follows a dedicated Healthcare Design Language, tuned for clarity, trust, and clinical legibility. Tokens below reflect the palette currently implemented in the Doctor Web `styles.css`.
 
 | Token | Value | Usage |
 |---|---|---|
-| Primary | `#2563EB` Royal Blue | Primary actions, links, active states |
-| Success | `#10B981` Emerald | Approvals, successful payments, confirmations |
-| Hero Background | `#0B132B` Deep Navy | Hero sections, high-contrast headers |
-| Background | `#F8FAFC` | App and dashboard background |
-| Surface | White | Cards, panels, modals |
-| Radius | Rounded (soft) | All cards and interactive elements |
+| Primary (Vivid Blue) | `#2563EB` | Primary buttons, links, active states |
+| Sidebar (Deep Navy) | `#0F1724` | Sidebar background, dark surfaces |
+| Success (Green) | `#16A34A` | Approve pills, confirmations |
+| Warning (Amber) | `#F59E0B` | Reject/pending pills, warnings |
+| Error (Red) | `#EF4444` | Notification badges, error states |
+| Accent (Teal) | `#06B6D4` | Highlights, accent details |
+| Background | `#F1F5F9` | App and dashboard background |
+| Text — Primary | `#0F1724` | Main body text |
+| Text — Muted | `#64748B` | Secondary/supporting text |
+| Typography | Inter, 300–800 weight | Headings 700–800, body 400–600, sizes 12px–28px |
+| Radius | Rounded (soft) | Cards, buttons, modals |
 | Elevation | Soft shadow | Card depth, layered UI |
 
-The result is a premium, clinical-grade interface consistent across the Patient app, Doctor dashboard, and Pharmacy dashboard.
+The result is a premium, clinical-grade interface consistent across the Patient app and Doctor dashboard. Status pills follow the same convention across the platform: **blue = pending**, **green = approved**, **amber = rejected**.
 
 ---
 
@@ -514,10 +527,9 @@ The result is a premium, clinical-grade interface consistent across the Patient 
 |---|---|
 | Node.js | ≥ 18.x |
 | npm / yarn | latest |
-| Python | ≥ 3.10 |
-| MongoDB Atlas | account + connection string |
+| MongoDB (local or Atlas) | connection string |
 | Expo CLI | latest |
-| Azure Document Intelligence | API key |
+| Python (for the planned OCR service) | ≥ 3.10 |
 
 ### Clone the Repository
 
@@ -530,59 +542,39 @@ cd rxdigit
 
 ```bash
 # Backend API
-cd services/backend-api
-npm install
-
-# OCR Service
-cd ../ocr-service
-pip install -r requirements.txt
-
-# Patient App
-cd ../../apps/patient-app
+cd backend/rxdigit-backend
 npm install
 
 # Doctor Dashboard
-cd ../doctor-dashboard
+cd ../../Docter-Web/doctor-web
 npm install
 
-# Pharmacy Dashboard
-cd ../pharmacy-dashboard
+# Patient App
+cd ../../frontend/patient-expo
 npm install
 ```
+
+> [!NOTE]
+> `pharmacy-dashboard` and `ocr-service` are part of the target architecture but are not yet present in the repository — see [Current Development Status](#current-development-status).
 
 ---
 
 ## Environment Variables
 
-Create a `.env` file in `services/backend-api/`:
+Create a `.env` file in `backend/rxdigit-backend/`:
 
 ```env
-# Server
-PORT=5000
+PORT=8080
+MONGODB_URI=mongodb://localhost:27017/rxdigit
 NODE_ENV=development
-
-# Database
-MONGODB_URI=your_mongodb_atlas_connection_string
-
-# Authentication
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRES_IN=7d
-
-# OCR Service
-OCR_SERVICE_URL=http://localhost:8000
-
-# Azure Document Intelligence
-AZURE_DOC_INTELLIGENCE_ENDPOINT=your_azure_endpoint
-AZURE_DOC_INTELLIGENCE_KEY=your_azure_key
-
-# Payments
-PAYMENT_GATEWAY_KEY=your_payment_gateway_key
-
-# Notifications
-NOTIFICATION_SERVICE_KEY=your_notification_key
+JWT_SECRET=your-super-secret-key-change-this
+CORS_ORIGIN=https://doctor-app.com,https://patient-app.com
 ```
 
-Create a `.env` file in `services/ocr-service/`:
+> [!WARNING]
+> `JWT_SECRET` must be replaced with a securely generated random string before any non-local deployment — see the [Deployment Checklist](#deployment).
+
+The OCR microservice (`services/ocr-service/`, Python/FastAPI + PaddleOCR + Azure Document Intelligence) is part of the target architecture described in [OCR Pipeline](#ocr-pipeline), but is not yet wired into the live backend — see [Current Development Status](#current-development-status). Its planned environment variables:
 
 ```env
 AZURE_DOC_INTELLIGENCE_ENDPOINT=your_azure_endpoint
@@ -596,77 +588,214 @@ CONFIDENCE_THRESHOLD=0.85
 ## Running Backend
 
 ```bash
-cd services/backend-api
+cd backend/rxdigit-backend
 npm run dev
 ```
 
-Backend runs by default on `http://localhost:5000`.
+Backend runs on `http://0.0.0.0:8080` by default (log line: `🚀 API listening on http://0.0.0.0:8080`).
 
-## Running OCR Service
+## Running Mobile App
+
+```bash
+cd frontend/patient-expo
+npx expo start -c
+```
+
+Scan the QR code with Expo Go, or launch an iOS / Android simulator. Confirm `API_BASE_URL` in `src/config/api.ts` points to your machine's LAN IP (e.g. `http://192.168.1.4:8080`) when testing on a physical device.
+
+## Running Doctor Dashboard
+
+```bash
+cd Docter-Web/doctor-web
+npm run dev
+```
+
+Runs on `http://localhost:5173` by default (falls back to `5174` if in use). Visit `http://localhost:5174/dashboard`.
+
+## Running OCR Service *(planned)*
 
 ```bash
 cd services/ocr-service
 uvicorn app.main:app --reload --port 8000
 ```
 
-OCR service runs by default on `http://localhost:8000`.
+This service is part of the target architecture and is not yet present in the codebase — see [Current Development Status](#current-development-status).
 
-## Running Mobile App
+## Running Pharmacy Dashboard *(planned)*
 
-```bash
-cd apps/patient-app
-npx expo start
-```
-
-Scan the QR code with Expo Go, or launch an iOS / Android simulator.
-
-## Running Doctor / Pharmacy Dashboards
-
-```bash
-cd apps/doctor-dashboard
-npm run dev
-
-cd apps/pharmacy-dashboard
-npm run dev
-```
+Not yet implemented — see [Current Development Status](#current-development-status).
 
 ---
 
+## Data Models
+
+Current Mongoose schemas implemented in `backend/rxdigit-backend/src/models/`:
+
+<details>
+<summary><strong>Doctor</strong></summary>
+
+```javascript
+{
+  _id: ObjectId,
+  doctor_id: String (unique),
+  name: String,
+  email: String (unique),
+  hospital: String,
+  role: String,
+  passwordHash: String,
+  is_active: Boolean,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+</details>
+
+<details>
+<summary><strong>Patient</strong></summary>
+
+```javascript
+{
+  _id: ObjectId,
+  patient_id: String (unique),
+  name: String,
+  phone: String,
+  email: String,
+  dob: Date (optional),
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+</details>
+
+<details>
+<summary><strong>Prescription</strong></summary>
+
+```javascript
+{
+  _id: ObjectId,
+  patientId: String (indexed),
+  doctorId: String (indexed, nullable),
+  kind: String,          // "text" | "structured"
+  status: String,        // "pending" | "approved" | "rejected"
+  text: String,
+  row: {
+    name: String,
+    strength: String,
+    dosage: String,
+    frequency: String,
+    duration: String,
+    timeOfDay: String,   // e.g. "morning, evening"
+    imageUri: String
+  },
+  approvalNote: String,
+  rejectionReason: String,
+  approvedAt: Date,
+  rejectedAt: Date,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+</details>
+
+<details>
+<summary><strong>HealthWalletEntry</strong></summary>
+
+```javascript
+{
+  _id: ObjectId,
+  patientId: String (indexed),
+  type: String,           // "prescription" | "report" | "vital" | "document"
+  referenceId: ObjectId (nullable),
+  title: String,
+  notes: String,
+  imageUrl: String,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+</details>
+
+> [!NOTE]
+> Prescription fields use **camelCase** (`imageUri`, `timeOfDay`) to match the backend schema. The Patient app previously sent snake_case fields (`image_uri`, `when_to_take`), which silently failed to save — this has been corrected in `confirm-structure.tsx`.
+
 ## API Overview
 
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `POST` | `/api/auth/register` | Register a new user (patient, doctor, pharmacy) | Public |
-| `POST` | `/api/auth/login` | Authenticate and receive JWT | Public |
-| `POST` | `/api/prescriptions` | Submit a captured prescription for OCR processing | Patient |
-| `GET` | `/api/prescriptions/:id` | Get prescription details | Patient / Doctor / Pharmacy |
-| `PATCH` | `/api/prescriptions/:id/review` | Doctor approves or rejects a prescription | Doctor |
-| `GET` | `/api/doctor/queue` | Get pending prescriptions for review | Doctor |
-| `POST` | `/api/pharmacy/validate` | Validate prescription against pharmacy inventory | Pharmacy |
-| `POST` | `/api/pharmacy/bill` | Generate a bill for an approved prescription | Pharmacy |
-| `POST` | `/api/payments` | Process payment for a generated bill | Patient |
-| `GET` | `/api/wallet/:patientId` | Retrieve patient's Health Wallet | Patient |
-| `GET` | `/api/timeline/:patientId` | Retrieve patient's Prescription Timeline | Patient |
-| `GET` | `/api/emergency-card/:patientId` | Retrieve patient's Emergency Card | Patient / Authorized |
-| `POST` | `/api/reminders` | Create a medicine reminder | System / Patient |
-| `POST` | `/api/ocr/extract` | Run OCR extraction on a prescription image | Internal (OCR service) |
+The backend currently exposes 40+ endpoints. The core, actively-used surface:
 
-> [!TIP]
-> Full request/response schemas are documented in `docs/api/` and will be published as an OpenAPI 3.0 specification ahead of the developer preview.
+| Method | Endpoint | Description | Auth |
+|---|---|---|---|
+| `POST` | `/api/auth/doctor/register` | Doctor sign up | Public |
+| `POST` | `/api/auth/doctor/login` | Doctor login, returns JWT | Public |
+| `POST` | `/api/auth/patient/register` | Patient sign up (phone or email) | Public |
+| `POST` | `/api/auth/patient/login` | Patient login, returns JWT | Public |
+| `GET` | `/api/doctor/dashboard` | Dashboard stats — total patients, pending, approved | Doctor |
+| `GET` | `/api/doctor/prescriptions` | List prescriptions with status filtering | Doctor |
+| `POST` | `/api/doctor/prescriptions/:id/approve` | Approve a prescription | Doctor |
+| `POST` | `/api/doctor/prescriptions/:id/reject` | Reject a prescription with reason | Doctor |
+| `GET` | `/api/doctor/patients/:id` | Patient profile + prescription history | Doctor |
+| `POST` | `/api/prescriptions/structured` | Submit a structured prescription from the Patient app | Patient |
+| `GET` | `/api/patient/prescriptions` | List the logged-in patient's prescriptions | Patient |
+| `GET` | `/api/patient/prescriptions/:id` | Get prescription details | Patient |
+| `GET` | `/api/patient/wallet` | Retrieve the patient's Health Wallet | Patient |
+| `POST` | `/api/patient/wallet/add-record` | Add a record to the Health Wallet | Patient |
+
+Plus 15+ legacy routes retained for backward compatibility during the frontend migration. Full reference: `COMPLETE_API_SPEC.md`.
+
+| Endpoint Category | Count | Auth Required | Typical Response Time |
+|---|---|---|---|
+| Authentication | 4 | ❌ | < 50ms |
+| Doctor Dashboard | 5 | ✅ | < 100ms |
+| Patient Health | 6 | ✅ | < 150ms |
+| Legacy Routes | 15+ | Mixed | < 200ms |
+
+### Token Structure
+
+Doctor and patient logins return a role-scoped JWT (HS256, 7-day expiry):
+
+```javascript
+{
+  id: "doctor_or_patient_id",
+  role: "doctor" | "patient",
+  email: "user@example.com",
+  iat: 1700000000,
+  exp: 1700604800
+}
+```
 
 ---
 
 ## Security Features
 
-| Feature | Description |
+| Feature | Current State |
 |---|---|
-| JWT Authentication | Stateless, signed tokens scoped to user role |
-| Role-Based Access Control | Distinct permission sets for Patient, Doctor, and Pharmacy roles |
-| Input Validation | Schema-level validation on all API payloads |
-| Encrypted Data at Rest | Sensitive prescription and payment data encrypted in MongoDB Atlas |
-| Encrypted Data in Transit | HTTPS/TLS enforced across all services |
-| Audit Trail | Every doctor approval/rejection is logged with timestamp and identity |
-| Secure Payments | Payment data never stored directly; processed via gateway tokenization |
+| JWT Authentication | ✅ Implemented — HS256, 7-day tokens, role-scoped (doctor/patient) |
+| Role-Based Access Control | ✅ Implemented — distinct Doctor and Patient permission sets |
+| Audit Trail | ✅ Implemented — every approval/rejection is timestamped (`approvedAt`/`rejectedAt`) with an optional note or reason |
+| CORS | ✅ Implemented — currently open for development; scoped to specific origins before production |
+| Password Hashing | ⚠️ Dev-only base64 encoding — **not production-secure**; bcrypt migration is a pre-launch requirement (see checklist below) |
+| Encrypted Data in Transit (HTTPS/TLS) | 🚧 Planned for deployment |
+| Rate Limiting on Auth Endpoints | 🚧 Planned |
+| Refresh Tokens | 🚧 Planned |
+| 2FA for Doctors | 🚧 Planned |
+| Email Verification (Patient) | 🚧 Planned |
+
+> [!WARNING]
+> The current authentication layer uses base64 password encoding for development speed. **This must not be used in any production or pilot deployment.** See the Deployment Checklist below.
+
+### Deployment Checklist — Before Production
+
+- [ ] Replace `JWT_SECRET` with a securely generated random string
+- [ ] Migrate password hashing from base64 to bcrypt
+- [ ] Enable HTTPS (TLS certificate)
+- [ ] Set `CORS_ORIGIN` to specific production domains (not `*`)
+- [ ] Add rate limiting to authentication endpoints
+- [ ] Implement email verification for patient registration
+- [ ] Add refresh token mechanism
+- [ ] Enable MongoDB Atlas replication/backup
+- [ ] Set up monitoring and alerting
+- [ ] Add request logging for audit trail
+- [ ] Implement 2FA for doctors
+- [ ] Add API versioning (`/v1/`, `/v2/`)
 
 > [!IMPORTANT]
 > RxDigit is designed with healthcare-grade data sensitivity in mind. Formal compliance certification (e.g., ABDM alignment) is part of the roadmap as the platform moves toward hospital-scale deployment.
@@ -684,7 +813,14 @@ The primary entry point for patients — built with React Native and Expo. Handl
 <details>
 <summary><strong>Doctor Dashboard</strong></summary>
 
-A web-based Review Workspace where doctors view incoming prescriptions, review OCR-extracted medicine data, and approve or reject submissions. Built with React, TypeScript, and Tailwind CSS.
+A web-based Review Workspace where doctors view incoming prescriptions and approve or reject submissions. Built with React, TypeScript, Tailwind CSS, and Vite. Implemented features:
+
+- **Header notification bell** with a live pending-prescription count badge, dropdown quick-approve/quick-reject actions, and click-outside-to-close behavior
+- **Dashboard Overview** with stat cards (total patients, new prescriptions, pending reviews, wallet records), a searchable prescriptions table, and a detailed Review Modal (approve/reject with notes)
+- **Analytics Panel** — prescriptions-per-day bar chart, adherence trend sparkline, top-disease horizontal bar chart, and JSON/CSV export
+- Polls the backend every 10 seconds for new pending prescriptions
+
+Status pills follow a consistent convention: blue = pending, green = approved, amber = rejected.
 </details>
 
 <details>
