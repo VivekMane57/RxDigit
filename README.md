@@ -176,21 +176,22 @@ Healthcare in most emerging markets still runs on paper at the last mile — the
 ---
 
 ## Product Demo
-
 > [!NOTE]
 > Demo videos will be linked here as they are recorded for pilot and investor walkthroughs.
 
-<details>
-<summary><strong>🎥 View Demo Placeholders</strong></summary>
+## Patient Journey 
+https://github.com/user-attachments/assets/58f791bd-d94c-45f7-87e9-f715eee8896e
 
-| Demo | Link |
-|---|---|
-| Patient Journey | `[ [video: patient-journey.mp4 ](https://github.com/user-attachments/assets/58f791bd-d94c-45f7-87e9-f715eee8896e)]` |
-| Doctor & Pharma-Workflow | `[ [video: doctor & Pharma-workflow.mp4](https://github.com/user-attachments/assets/0627f174-b33d-4e4a-ad96-2408867f7f31) ]` |
-| Patient Payment | `[ [video:  Patient Payment .mp4 ](https://github.com/user-attachments/assets/2cce29f0-b32c-4909-b790-a70740fe35b8)]` |
-| Pharma Workflow and billing| `[ video: [Pharma Workflow and billing](https://github.com/user-attachments/assets/31eb0a1f-4e02-41db-83a3-05d8498fc6f7).mp4 ]` |
+## Doctor & Pharma-Workflow
+https://github.com/user-attachments/assets/0627f174-b33d-4e4a-ad96-2408867f7f31
 
-</details>
+## Patient Payment 
+https://github.com/user-attachments/assets/2cce29f0-b32c-4909-b790-a70740fe35b8
+
+## Pharma Workflow and billing
+https://github.com/user-attachments/assets/31eb0a1f-4e02-41db-83a3-05d8498fc6f7
+
+
 
 ---
 
